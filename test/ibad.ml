@@ -1,4 +1,4 @@
-open Ibad
+open Ibad.VL
 
 type address = {
   street : string;
@@ -83,7 +83,7 @@ let _number =
     ( module struct
       type a = address
 
-      type b = int
+      type b = number
 
       module Mk (F : FUNCTOR) = struct
         let run f x = F.map (fun number -> { x with number }) @@ f x.number
