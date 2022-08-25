@@ -19,7 +19,16 @@
  (name ibad)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends
+  ;; General system dependencies
+  (dune
+   (>= 2))
+  (ocaml
+   (>= 4.14.0))
+  (alcotest
+   (>= 1.6.0))
+  (ocaml-lsp-server
+   (>= 1.13.1)))
  (tags
   (topics "to describe" your project)))
 

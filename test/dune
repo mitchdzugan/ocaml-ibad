@@ -1,2 +1,3 @@
 (test
- (name ibad))
+ (name ibad)
+ (libraries alcotest))
