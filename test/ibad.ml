@@ -1,4 +1,5 @@
-open Ibad.VL
+open Ibad.Lens
+open VL
 
 type address = {
   street : string;
@@ -83,7 +84,7 @@ let _number =
     ( module struct
       type a = address
 
-      type b = number
+      type b = int
 
       module Mk (F : FUNCTOR) = struct
         let run f x = F.map (fun number -> { x with number }) @@ f x.number
@@ -103,7 +104,8 @@ let test_lens () =
   Alcotest.(check string)
     "" "E1W" ((_addPostCode @% String.uppercase_ascii) person).address.postcode;
   Alcotest.(check int)
-    "" 43 ((_addNumber @% fun x -> x + 1) person).address.number
+    "" 43 ((_addNumber @% fun x -> x + 1) person).address.number;
+  Alcotest.(check int) "" 1 PF.aVal
 
 let () =
   let open Alcotest in
