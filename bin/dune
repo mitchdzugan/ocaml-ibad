@@ -1,0 +1,4 @@
+(executable
+ (public_name ibad)
+ (name main)
+ (libraries alcotest ibad))

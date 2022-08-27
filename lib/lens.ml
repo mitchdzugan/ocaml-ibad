@@ -1,7 +1,18 @@
+let (<<) f g x = f(g(x))
+let (>>) g f x = f(g(x))
+
 module type PROFUNCTOR = sig
   type ('a, 'b) p
 
   val dimap : ('a -> 'b) -> ('c -> 'd) -> ('b, 'c) p -> ('a, 'd) p
+end
+
+module type CHOICE = sig
+  include PROFUNCTOR
+
+  val left : ('a, 'b) p -> (('a, 'c) Either.t, ('b, 'c) Either.t) p
+
+  (*val right : ('b, 'c) p -> (('a, 'b) Either.t, ('a, 'c) Either.t) p*)
 end
 
 module type STRONG = sig
@@ -12,20 +23,26 @@ module type STRONG = sig
   val second : ('b, 'c) p -> ('a * 'b, 'a * 'c) p
 end
 
+module type STRONGCHOICE = sig
+  include STRONG
+  include CHOICE with type ('a, 'b) p := ('a, 'b) p
+end
+
 module Profunctable (P: PROFUNCTOR) = struct
   type ('a, 'b) p = ('a, 'b) P.p
   let dimap = P.dimap
 end
 
-type ('r, 'a, 'b) forget = Forget of ('a -> 'r)
-let mkF f = Forget f
-let ofF = function | Forget f -> f
-
 module type TYPE = sig
   type t
 end
 
-module ForgetStrongProfunctor (T : TYPE) :
+(***********************  FORGET  ********************************)
+type ('r, 'a, 'b) forget = Forget of ('a -> 'r)
+let mkF f = Forget f
+let ofF = function | Forget f -> f
+
+module ForgetF (T : TYPE) :
   STRONG with type ('a, 'b) p = (T.t, 'a, 'b) forget = struct
   type ('a, 'b) p = (T.t, 'a, 'b) forget
 
@@ -35,6 +52,29 @@ module ForgetStrongProfunctor (T : TYPE) :
 
   let second fz = mkF @@ fun x -> ofF fz @@ snd x
 end
+
+(***********************  FUNC  ********************************)
+type ('a, 'b) func = 'a -> 'b
+(*let mk_func (f : ('a, 'b) func) = f*)
+
+module Func : STRONG with type ('a, 'b) p = ('a, 'b) func = struct
+  type ('a, 'b) p = ('a, 'b) func
+  let dimap a2b c2d b2c = a2b >> b2c >> c2d
+  let first a2b (a, c) = (a2b a), c
+  let second b2c (a, b) = a, (b2c b)
+  
+  (*
+  let left a2b = mk_func(function
+    | Either.Left a -> Either.Left (a2b a)
+    | r -> r
+  )
+  let right b2c v = match v with
+    | Either.Right b -> Either.Right (b2c b)
+    | l -> l
+  *)
+end
+
+(***********************  OPTICS  ********************************)
 
 module type OPTIC = sig
   type s
@@ -53,62 +93,43 @@ module type STRONG_OPTIC = sig
   end
 end
 
-
 let view (type s t a b)
   (lens :
     (module STRONG_OPTIC with type s = s and type t = t and type a = a and type b = b)
     )
   =
   let module L = (val lens) in
-  let module R = L.Mk (ForgetStrongProfunctor (struct type t = a end)) in
+  let module R = L.Mk (ForgetF (struct type t = a end)) in
   ofF @@ R.run (Forget (fun x -> x))
 
-let ( ^@ ) o l = view l o
+let over (type s t a b)
+  (lens :
+    (module STRONG_OPTIC with type s = s and type t = t and type a = a and type b = b)
+    )
+  (f : a -> b)
+  =
+  let module L = (val lens) in
+  let module R = L.Mk (Func) in
+  R.run f
+
+let set l b = over l (fun _ -> b)
+
+let ( ^* ) o l = view l o
+let ( *% ) l f = over l f
+let ( *= ) l v = set l v
 
 let to' f p = mkF (fun z -> ofF p @@ f z)
 
-type testIso = { a : int }
 
-type testLens = {
-  d : int;
-  b : int;
-}
+type ('s, 't, 'a, 'b) lens = (module STRONG_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
+let mk_lens (lens : (module STRONG_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+  : ('s, 't, 'a, 'b) lens
+  =
+  lens
 
 
-let testIsoObj = { a = 1 }
-
-let testLensObj = { d = 1; b = 7 }
-
-module D_ = struct
-  type s = testLens
-  type t = testLens
-  type a = int
-  type b = int
-  module Mk (P : STRONG) = struct
-    let run p = P.dimap (fun tt -> (tt.d, (fun d -> { d; b = tt.b }))) (fun (b, f) -> f b) (P.first p)
-  end
-end
-
-module A_ = struct
-  type s = testIso
-  type t = testIso
-  type a = int
-  type b = int
-  module Mk (P : PROFUNCTOR) = struct
-    let run p = P.dimap (fun tt -> tt.a) (fun a -> { a }) p
-  end
-end
-
-let dVal = testLensObj ^@ (module struct include D_ end)
-
-let aVal = testIsoObj ^@ (module struct include A_ end)
-
-(****
- * Ideally will be able to write the above like this with ppx
- * 
-    module D_ = [%lens fun tt -> tt.d, fun tt d -> { tt with d }]
-    module A_ = [%iso fun tt -> tt.a, fun a -> { a }]
-    let dVal = testLensObj ^@ [D_]
-    let aVal = testIsoObj ^@ [A_]
- *
- *)
+type ('s, 't, 'a, 'b) iso = (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
+let mk_iso (iso : (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+  : ('s, 't, 'a, 'b) iso
+  =
+  iso
