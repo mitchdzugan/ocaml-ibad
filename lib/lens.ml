@@ -3,23 +3,18 @@ let (>>) g f x = f(g(x))
 
 module type PROFUNCTOR = sig
   type ('a, 'b) p
-
   val dimap : ('a -> 'b) -> ('c -> 'd) -> ('b, 'c) p -> ('a, 'd) p
 end
 
 module type CHOICE = sig
   include PROFUNCTOR
-
   val left : ('a, 'b) p -> (('a, 'c) Either.t, ('b, 'c) Either.t) p
-
-  (*val right : ('b, 'c) p -> (('a, 'b) Either.t, ('a, 'c) Either.t) p*)
+  val right : ('b, 'c) p -> (('a, 'b) Either.t, ('a, 'c) Either.t) p
 end
 
 module type STRONG = sig
   include PROFUNCTOR
-
   val first : ('a, 'b) p -> ('a * 'c, 'b * 'c) p
-
   val second : ('b, 'c) p -> ('a * 'b, 'a * 'c) p
 end
 
@@ -55,23 +50,21 @@ end
 
 (***********************  FUNC  ********************************)
 type ('a, 'b) func = 'a -> 'b
-(*let mk_func (f : ('a, 'b) func) = f*)
 
-module Func : STRONG with type ('a, 'b) p = ('a, 'b) func = struct
+module Func : STRONGCHOICE with type ('a, 'b) p = ('a, 'b) func = struct
   type ('a, 'b) p = ('a, 'b) func
   let dimap a2b c2d b2c = a2b >> b2c >> c2d
   let first a2b (a, c) = (a2b a), c
   let second b2c (a, b) = a, (b2c b)
   
-  (*
-  let left a2b = mk_func(function
+  
+  let left a2b = function
     | Either.Left a -> Either.Left (a2b a)
-    | r -> r
-  )
+    | Either.Right r -> Either.Right r
+
   let right b2c v = match v with
     | Either.Right b -> Either.Right (b2c b)
-    | l -> l
-  *)
+    | Either.Left l -> Either.Left l
 end
 
 (***********************  OPTICS  ********************************)
@@ -93,6 +86,20 @@ module type STRONG_OPTIC = sig
   end
 end
 
+module type CHOICE_OPTIC = sig
+  include OPTIC
+  module Mk : functor (P : CHOICE) -> sig
+    val run : (a, b) P.p -> (s, t) P.p
+  end
+end
+
+module type STRONGCHOICE_OPTIC = sig
+  include OPTIC
+  module Mk : functor (P : STRONGCHOICE) -> sig
+    val run : (a, b) P.p -> (s, t) P.p
+  end
+end
+
 let view (type s t a b)
   (lens :
     (module STRONG_OPTIC with type s = s and type t = t and type a = a and type b = b)
@@ -104,7 +111,7 @@ let view (type s t a b)
 
 let over (type s t a b)
   (lens :
-    (module STRONG_OPTIC with type s = s and type t = t and type a = a and type b = b)
+    (module STRONGCHOICE_OPTIC with type s = s and type t = t and type a = a and type b = b)
     )
   (f : a -> b)
   =
@@ -128,8 +135,32 @@ let mk_lens (lens : (module STRONG_OPTIC with type s = 's and type t = 't and ty
   lens
 
 
+type ('s, 't, 'a, 'b) prism = (module CHOICE_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
+let mk_prism (prism : (module CHOICE_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+  : ('s, 't, 'a, 'b) prism
+  =
+  prism
+
+
 type ('s, 't, 'a, 'b) iso = (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
 let mk_iso (iso : (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
   : ('s, 't, 'a, 'b) iso
   =
   iso
+
+let compose_lens (type ss tt aa bb xx yy) (l1 : (xx, yy, aa, bb) lens) (l2 : (ss, tt, xx, yy) lens)= mk_lens(
+  module struct
+    type s = ss
+    type t = tt
+    type a = aa
+    type b = bb
+    module Mk(P: STRONG) = struct
+      let run p =
+        let module L1 = (val l1) in
+        let module L2 = (val l2) in
+        let module R1 = L1.Mk(P) in
+        let module R2 = L2.Mk(P) in
+        R2.run(R1.run(p))
+    end
+  end
+)
