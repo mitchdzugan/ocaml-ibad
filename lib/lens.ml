@@ -98,13 +98,17 @@ module A_ = struct
     let run p = P.dimap (fun tt -> tt.a) (fun a -> { a }) p
   end
 end
-  
 
 let dVal = testLensObj ^@ (module struct include D_ end)
 
 let aVal = testIsoObj ^@ (module struct include A_ end)
 
-
-
-
-
+(****
+ * Ideally will be able to write the above like this with ppx
+ * 
+    module D_ = [%lens fun tt -> tt.d, fun tt d -> { tt with d }]
+    module A_ = [%iso fun tt -> tt.a, fun a -> { a }]
+    let dVal = testLensObj ^@ [D_]
+    let aVal = testIsoObj ^@ [A_]
+ *
+ *)
