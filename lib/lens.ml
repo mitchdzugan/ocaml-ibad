@@ -1,6 +1,14 @@
 let (<<) f g x = f(g(x))
 let (>>) g f x = f(g(x))
 
+let maybe def f = function
+ | Some(v) -> f(v)
+ | _ -> def
+
+let either fl fr = function
+| Either.Left(l) -> fl(l)
+| Either.Right(r) -> fr(r)
+
 module type PROFUNCTOR = sig
   type ('a, 'b) p
   val dimap : ('a -> 'b) -> ('c -> 'd) -> ('b, 'c) p -> ('a, 'd) p
@@ -129,26 +137,61 @@ let to' f p = mkF (fun z -> ofF p @@ f z)
 
 
 type ('s, 't, 'a, 'b) lens = (module STRONG_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
-let mk_lens (lens : (module STRONG_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+let mk_raw_lens (lens : (module STRONG_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
   : ('s, 't, 'a, 'b) lens
   =
   lens
 
 
 type ('s, 't, 'a, 'b) prism = (module CHOICE_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
-let mk_prism (prism : (module CHOICE_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+let mk_raw_prism (prism : (module CHOICE_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
   : ('s, 't, 'a, 'b) prism
   =
   prism
 
 
 type ('s, 't, 'a, 'b) iso = (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
-let mk_iso (iso : (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
+let mk_raw_iso (iso : (module OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b))
   : ('s, 't, 'a, 'b) iso
   =
   iso
 
-let compose_lens (type ss tt aa bb xx yy) (l1 : (xx, yy, aa, bb) lens) (l2 : (ss, tt, xx, yy) lens)= mk_lens(
+
+let lens (type ss tt aa bb) (get : ss -> aa) (set : ss -> bb -> tt) = mk_raw_lens ( module struct
+  type s = ss
+  type t = tt
+  type a = aa
+  type b = bb
+  module Mk (P : STRONG) = struct
+    let run p = P.dimap (fun s -> (get s, (set s))) (fun (b, f) -> f b) (P.first p)
+  end
+end)
+
+
+let iso (type ss tt aa bb) (f : ss -> aa) (g : bb -> tt) = mk_raw_iso ( module struct
+  type s = ss
+  type t = tt
+  type a = aa
+  type b = bb
+  module Mk (P : PROFUNCTOR) = struct
+    let run p = P.dimap f g p
+  end
+end)
+
+
+let prism (type ss aa) (to' : aa -> ss) (fro : ss -> aa option) = mk_raw_prism ( module struct
+  type s = ss
+  type t = ss
+  type a = aa
+  type b = aa
+  module Mk (P : CHOICE) = struct
+    let run p = P.dimap (fun s -> maybe (Either.Left s) (fun r -> Either.Right r) (fro s))
+                        (either (fun x -> x) (fun x -> x))
+                        (P.right (P.dimap (fun x -> x) to' p))
+  end
+end)
+
+let compose_lens (type ss tt aa bb xx yy) (l1 : (ss, tt, xx, yy) lens) (l2 : (xx, yy, aa, bb) lens)= mk_raw_lens(
   module struct
     type s = ss
     type t = tt
@@ -160,7 +203,13 @@ let compose_lens (type ss tt aa bb xx yy) (l1 : (xx, yy, aa, bb) lens) (l2 : (ss
         let module L2 = (val l2) in
         let module R1 = L1.Mk(P) in
         let module R2 = L2.Mk(P) in
-        R2.run(R1.run(p))
+        R1.run(R2.run(p))
     end
   end
 )
+
+module Compose = struct
+  module Lens = struct
+    let (>>) = compose_lens
+  end
+end
