@@ -1,0 +1,10 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+_opam/
+_build/
+.vscode/
+build/
+.idea/

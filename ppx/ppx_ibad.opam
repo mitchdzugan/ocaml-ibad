@@ -4,18 +4,16 @@ synopsis: "A short synopsis"
 description: "A longer description"
 maintainer: ["Maintainer Name"]
 authors: ["Author Name"]
-license: "LICENSE"
-homepage: "https://github.com/mitchdzugan/ocaml-ibad"
+license: "MIT"
+homepage: "https://github.com/mitchdzugan/ppx_ibad"
 doc: "https://url/to/documentation"
-bug-reports: "https://github.com/mitchdzugan/ocaml-ibad/issues"
+bug-reports: "https://github.com/mitchdzugan/ppx_ibad/issues"
 depends: [
   "dune" {>= "3.4" & >= "2"}
   "ocaml" {>= "4.14.0"}
   "ppxlib" {>= "0.26.0"}
   "alcotest" {>= "1.6.0"}
   "ocaml-lsp-server" {>= "1.13.1"}
-  "ppx_ibad" {dev}
-  "ppx_map" {dev}
   "odoc" {with-doc}
 ]
 build: [
@@ -32,4 +30,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "git+https://github.com/mitchdzugan/ocaml-ibad.git"
+dev-repo: "git+https://github.com/mitchdzugan/ppx_ibad.git"

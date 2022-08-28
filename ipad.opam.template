@@ -1,3 +1,4 @@
 pin-depends: [
-  [ "ppx_ibad.dev" "git+https://github.com/mitchdzugan/ppx_ibad.git#c7537a4" ]
+  [ "ppx_ibad.dev" "git+https://github.com/mitchdzugan/ppx_ibad.git#7351c1d" ]
+  [ "ppx_map.dev" "git+https://github.com/bensmrs/ppx_map.git#d252496" ]
 ]

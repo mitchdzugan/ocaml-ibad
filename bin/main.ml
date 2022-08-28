@@ -54,8 +54,8 @@ let testComposeObj = { x = 1; i = { a = 3 } }
 
 let test_lens () =
   let dVal = testLensObj ^* [%ibad _d] in
-  let aVal = testIsoObj ^* (module struct include (val _a) end) in
-  let cVal = testComposeObj ^* (module struct include (val _ia) end) in
+  let aVal = testIsoObj ^* [%ibad _a] in
+  let cVal = testComposeObj ^* [%ibad _ia] in
   Alcotest.(check int) "" 1 aVal;
   Alcotest.(check int) "" 1 dVal;
   Alcotest.(check int) "" 3 cVal;
@@ -63,18 +63,9 @@ let test_lens () =
   Alcotest.(check int) "" 7 testLensObj.b
 
 let () =
-  Format.printf "%b\n"
-    (((module struct include (val _d) end) *= 3) @@ testLensObj
-    = { d = 3; b = 7 }
-    );
-  Format.printf "%b\n"
-    ((!*_a *= 3) @@ testIsoObj = { a = 3 });
-  Format.printf "%b\n"
-    (((module struct include (val _o) end) *= 3) @@ testPrismObj1 = PrismO 3);
-  Format.printf "%b\n"
-    (((module struct include (val _o) end) *= 3) @@ testPrismObj2
-    = testPrismObj2
-    );
+  Format.printf "%b\n" (([%ibad _d] *= 3) @@ testLensObj = { d = 3; b = 7 });
+  Format.printf "%b\n" ((!*_a *= 3) @@ testIsoObj = { a = 3 });
+  Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj1 = PrismO 3);
+  Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj2 = testPrismObj2);
   let open Alcotest in
-  run "ibad" [ "basic lens", [ test_case "get/modify/set" `Quick test_lens ] ];
-  print_string [%ibad "Hello World!"]
+  run "ibad" [ "basic lens", [ test_case "get/modify/set" `Quick test_lens ] ]
