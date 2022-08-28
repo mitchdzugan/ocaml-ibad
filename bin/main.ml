@@ -22,10 +22,7 @@ let _i = lens (fun tc -> tc.i) (fun tc i -> { tc with i })
 
 let _a = iso (fun ti -> ti.a) (fun a -> { a })
 
-let _ia =
-  Compose.Lens.(
-    (module struct include (val _i) end) >> (module struct include (val _a) end)
-  )
+let _ia = Compose.Lens.([%ibad _i] >> [%ibad _a])
 
 let _o =
   let tpgm = function
@@ -33,14 +30,6 @@ let _o =
     | _ -> None
   in
   prism (fun x -> PrismO x) tpgm
-
-(****
- * Ideally will be able to write the above like this with ppx
- * 
-    let dVal = testLensObj ^@ [%ibad _d]
-    let aVal = testIsoObj ^@ [%ibad _a]
- *
- *)
 
 let testIsoObj = { a = 1 }
 
