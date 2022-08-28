@@ -1,4 +1,5 @@
 (executable
  (public_name ibad)
  (name main)
- (libraries alcotest ibad))
+ (libraries alcotest ibad)
+ (preprocess (pps ppx_ibad)))

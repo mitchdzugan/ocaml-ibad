@@ -37,8 +37,8 @@ let _o =
 (****
  * Ideally will be able to write the above like this with ppx
  * 
-    let dVal = testLensObj ^@ [% _d]
-    let aVal = testIsoObj ^@ [% _a]
+    let dVal = testLensObj ^@ [%ibad _d]
+    let aVal = testIsoObj ^@ [%ibad _a]
  *
  *)
 
@@ -53,7 +53,7 @@ let testPrismObj2 = PrismNo ""
 let testComposeObj = { x = 1; i = { a = 3 } }
 
 let test_lens () =
-  let dVal = testLensObj ^* (module struct include (val _d) end) in
+  let dVal = testLensObj ^* [%ibad _d] in
   let aVal = testIsoObj ^* (module struct include (val _a) end) in
   let cVal = testComposeObj ^* (module struct include (val _ia) end) in
   Alcotest.(check int) "" 1 aVal;
@@ -68,7 +68,7 @@ let () =
     = { d = 3; b = 7 }
     );
   Format.printf "%b\n"
-    (((module struct include (val _a) end) *= 3) @@ testIsoObj = { a = 3 });
+    ((!*_a *= 3) @@ testIsoObj = { a = 3 });
   Format.printf "%b\n"
     (((module struct include (val _o) end) *= 3) @@ testPrismObj1 = PrismO 3);
   Format.printf "%b\n"
@@ -76,4 +76,5 @@ let () =
     = testPrismObj2
     );
   let open Alcotest in
-  run "ibad" [ "basic lens", [ test_case "get/modify/set" `Quick test_lens ] ]
+  run "ibad" [ "basic lens", [ test_case "get/modify/set" `Quick test_lens ] ];
+  print_string [%ibad "Hello World!"]

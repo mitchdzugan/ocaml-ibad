@@ -302,3 +302,6 @@ let compose_lens
     )
 
 module Compose = struct module Lens = struct let ( >> ) = compose_lens end end
+
+exception ShouldBePPX'd of string
+let (!*) _ = raise (ShouldBePPX'd "This function should be replaced by ppx")

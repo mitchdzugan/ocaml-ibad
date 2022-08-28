@@ -1,0 +1,3 @@
+pin-depends: [
+  [ "ppx_ibad.dev" "git+https://github.com/mitchdzugan/ppx_ibad.git#c7537a4" ]
+]

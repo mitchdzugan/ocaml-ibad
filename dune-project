@@ -4,8 +4,7 @@
 
 (generate_opam_files true)
 
-(source
- (github username/reponame))
+(source (github mitchdzugan/ocaml-ibad))
 
 (authors "Author Name")
 
@@ -21,15 +20,11 @@
  (description "A longer description")
  (depends
   ;; General system dependencies
-  (dune
-   (>= 2))
-  (ocaml
-   (>= 4.14.0))
-  (alcotest
-   (>= 1.6.0))
-  (ocaml-lsp-server
-   (>= 1.13.1)))
- (tags
-  (topics "to describe" your project)))
+  (dune (>= 2))
+  (ocaml (>= 4.14.0))
+  (ppxlib (>= 0.26.0))
+  (alcotest (>= 1.6.0))
+  (ocaml-lsp-server (>= 1.13.1))
+  (ppx_ibad :dev)))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
