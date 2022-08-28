@@ -64,7 +64,7 @@ let test_lens () =
 
 let () =
   Format.printf "%b\n" (([%ibad _d] *= 3) @@ testLensObj = { d = 3; b = 7 });
-  Format.printf "%b\n" ((!*_a *= 3) @@ testIsoObj = { a = 3 });
+  Format.printf "%b\n" (([%ibad _a] *= 3) @@ testIsoObj = { a = 3 });
   Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj1 = PrismO 3);
   Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj2 = testPrismObj2);
   let open Alcotest in
