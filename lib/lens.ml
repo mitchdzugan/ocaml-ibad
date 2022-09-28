@@ -52,7 +52,12 @@ let mkF f = Forget f
 let ofF = function
   | Forget f -> f
 
-module ForgetF (T : TYPE) : STRONG with type ('a, 'b) p = (T.t, 'a, 'b) forget =
+module type ISFORGET = sig
+  include STRONG
+  val fmap : ('r -> 'x) -> ('r, 'a, 'b) forget -> ('x, 'a, 'b) forget
+end 
+
+module ForgetF (T : TYPE) : ISFORGET with type ('a, 'b) p = (T.t, 'a, 'b) forget =
 struct
   type ('a, 'b) p = (T.t, 'a, 'b) forget
 
@@ -61,6 +66,8 @@ struct
   let first fz = mkF @@ fun x -> ofF fz @@ fst x
 
   let second fz = mkF @@ fun x -> ofF fz @@ snd x
+
+  let fmap f fgt = mkF (fun x -> f @@ ofF fgt @@ x)
 end
 
 (***********************  FUNC  ********************************)
@@ -121,6 +128,14 @@ module type STRONGCHOICE_OPTIC = sig
   include OPTIC
 
   module Mk : functor (P : STRONGCHOICE) -> sig
+    val run : (a, b) P.p -> (s, t) P.p
+  end
+end
+
+module type ISFORGET_OPTIC = sig
+  include OPTIC
+
+  module Mk : functor (P : ISFORGET) -> sig
     val run : (a, b) P.p -> (s, t) P.p
   end
 end
@@ -211,7 +226,7 @@ type ('s, 't, 'a, 'b) iso =
 let mk_raw_iso
   (iso :
     (module OPTIC
-       with type s = 's
+        with type s = 's
         and type t = 't
         and type a = 'a
         and type b = 'b
@@ -220,6 +235,23 @@ let mk_raw_iso
   : ('s, 't, 'a, 'b) iso
   =
   iso
+
+
+type ('s, 't, 'a, 'b) getter =
+  (module ISFORGET_OPTIC with type s = 's and type t = 't and type a = 'a and type b = 'b)
+
+let mk_raw_getter
+  (getter :
+    (module ISFORGET_OPTIC
+        with type s = 's
+        and type t = 't
+        and type a = 'a
+        and type b = 'b
+    )
+    )
+  : ('s, 't, 'a, 'b) getter
+  =
+  getter
 
 let lens (type ss tt aa bb) (get : ss -> aa) (set : ss -> bb -> tt) =
   mk_raw_lens
@@ -238,6 +270,25 @@ let lens (type ss tt aa bb) (get : ss -> aa) (set : ss -> bb -> tt) =
       end
     end
     )
+
+(*
+let getter (type ss aa) (get : ss -> aa) =
+  mk_raw_getter
+    ( module struct
+      type s = ss
+
+      type t = ss
+
+      type a = aa
+
+      type b = aa
+
+      module Mk (P : ISFORGET) = struct let 
+        run p = P.fmap get p
+      end
+    end
+    )
+*)
 
 let iso (type ss tt aa bb) (f : ss -> aa) (g : bb -> tt) =
   mk_raw_iso
@@ -302,6 +353,3 @@ let compose_lens
     )
 
 module Compose = struct module Lens = struct let ( >> ) = compose_lens end end
-
-exception ShouldBePPX'd of string
-let (!*) _ = raise (ShouldBePPX'd "This function should be replaced by ppx")

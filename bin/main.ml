@@ -25,11 +25,11 @@ let _a = iso (fun ti -> ti.a) (fun a -> { a })
 let _ia = Compose.Lens.([%ibad _i] >> [%ibad _a])
 
 let _o =
-  let tpgm = function
+  let test_prism_get_maybe = function
     | PrismO n -> Some n
     | _ -> None
   in
-  prism (fun x -> PrismO x) tpgm
+  prism (fun x -> PrismO x) test_prism_get_maybe
 
 let testIsoObj = { a = 1 }
 
@@ -52,9 +52,9 @@ let test_lens () =
   Alcotest.(check int) "" 7 testLensObj.b
 
 let () =
-  Format.printf "%b\n" (([%ibad _d] *= 3) @@ testLensObj = { d = 3; b = 7 });
-  Format.printf "%b\n" (([%ibad _a] *= 3) @@ testIsoObj = { a = 3 });
-  Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj1 = PrismO 3);
-  Format.printf "%b\n" (([%ibad _o] *= 3) @@ testPrismObj2 = testPrismObj2);
+  Format.printf "%b\n" ([%ibad _d] *= 3 @@ testLensObj = { d = 3; b = 7 });
+  Format.printf "%b\n" ([%ibad _a] *= 3 @@ testIsoObj = { a = 3 });
+  Format.printf "%b\n" ([%ibad _o] *= 3 @@ testPrismObj1 = PrismO 3);
+  Format.printf "%b\n" ([%ibad _o] *= 3 @@ testPrismObj2 = testPrismObj2);
   let open Alcotest in
   run "ibad" [ "basic lens", [ test_case "get/modify/set" `Quick test_lens ] ]
